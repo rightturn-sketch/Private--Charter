@@ -298,9 +298,9 @@
       </div>
       <div id="vehicleNote" style="display:none; margin-top:14px; font-size:11px; color:var(--muted); line-height:1.7; background:var(--bg-elev); border:1px solid var(--border); border-radius:10px; padding:12px;">
         以上包車金額僅供參考，最終價格以客服報價為準；部分特殊車款需另洽客服報價。<br>
-        超時收費標準：轎車／休旅車每小時加收 NT$500，9人座每小時加收 NT$700（超過8小時部分，實際費用請洽客服報價）。<br>
+        超時收費標準（每小時）：轎車 NT$600，休旅車 NT$700，9人座 NT$900（超過10小時部分）。<br>
         （8小時以上方案總里程不超過200公里為限），（4小時方案以不超過100公里為限），超過部分每公里加收NT$25.
-        <span class="en" style="display:block; margin-top:8px; opacity:0.85;">Prices above are estimates only; final pricing confirmed by our staff. Overtime: sedan/SUV +NT$500/hr, 9-seat +NT$700/hr (beyond 8 hrs, contact us for a quote). Mileage caps apply (200km for 8+ hr plans, 100km for 4 hr plans); excess mileage +NT$25/km.</span>
+        <span class="en" style="display:block; margin-top:8px; opacity:0.85;">Prices above are estimates only; final pricing confirmed by our staff. Overtime (per hour, beyond 10 hrs): sedan +NT$600, SUV +NT$700, 9-seat +NT$900. Mileage caps apply (200km for 8+ hr plans, 100km for 4 hr plans); excess mileage +NT$25/km.</span>
       </div>
       <div class="field" style="margin-top:14px;">
         <label>座椅加購（可選數量，NT$200／個）<span class="en">Seat Add-ons (quantity, NT$200 each)</span></label>
@@ -644,35 +644,32 @@
     "8/9人座商務車": { desc:"商務車・大車・適合團體或大量行李", descEn:"Van · Large · Fits groups or heavy luggage", nameEn:"8/9-Seat Van", tier:"大車" }
   };
 
-  // 包車服務定價（依「包車服務定價收費」價目表）
-  // base8: 8小時基礎價；overtimePerHour: 超過8小時之後每小時加價（僅作文字說明，不納入自動試算）
-  // 未滿8小時之預估金額，以 base8 × 時數/8 等比例試算（例：轎車4小時 = 4000×4/8 = 2000）
+  // 包車服務定價（依「包車服務定額收費」價目表）
+  // tiers：4/6/8/10小時之定額價格；overtimePerHour：超過10小時之後每小時加價
   const CHARTER_RATES = {
-    "五人座轎車":   { base8: 4000, overtimePerHour: 500 },
-    "五人座休旅車": { base8: 4800, overtimePerHour: 500 },
-    "8/9人座商務車": { base8: 6400, overtimePerHour: 700 }
+    "五人座轎車":   { tiers: { 4: 2500, 6: 3300, 8: 4000, 10: 4800 }, overtimePerHour: 600 },
+    "五人座休旅車": { tiers: { 4: 3000, 6: 3900, 8: 4800, 10: 5700 }, overtimePerHour: 700 },
+    "8/9人座商務車": { tiers: { 4: 4000, 6: 5200, 8: 6400, 10: 7600 }, overtimePerHour: 900 }
   };
   function computeCharterPrice(vehicleType, hoursValue){
     const rate = CHARTER_RATES[vehicleType];
     const h = Number(hoursValue);
     if(!rate || !hoursValue || isNaN(h)) return null;
-    if(h > 8) return null; // 超過8小時屬超時計費，不自動試算，請洽客服報價
-    return Math.round(rate.base8 * h / 8);
+    if(rate.tiers[h] !== undefined) return rate.tiers[h]; // 4/6/8/10小時：定額價格
+    if(h > 10) return rate.tiers[10] + Math.round((h - 10) * rate.overtimePerHour); // 超過10小時：10小時定額＋超時費
+    return null; // 非表列時數（例如未滿4小時），請洽客服報價
   }
   // 統一組出包車金額顯示文字：
   // - 未選時數或選「其他」：請洽客服報價
-  // - 8小時以內：等比例試算金額
-  // - 超過8小時：顯示8小時基礎價，超時費另計（不自動加總）
+  // - 4/6/8/10小時：對應之定額價格
+  // - 超過10小時：10小時定額價格＋超時費（每小時加價，依車型不同）
   function describeCharterPrice(vehicleType, hoursValue){
     const rate = CHARTER_RATES[vehicleType];
     if(!hoursValue || hoursValue === '其他' || !rate) return '請洽客服報價';
     const h = Number(hoursValue);
     if(isNaN(h)) return '請洽客服報價';
-    if(h <= 8){
-      const price = computeCharterPrice(vehicleType, hoursValue);
-      return price !== null ? ('約 NT$ ' + price.toLocaleString()) : '請洽客服報價';
-    }
-    return '基礎(8hr) NT$ ' + rate.base8.toLocaleString() + '＋超時費另計';
+    const price = computeCharterPrice(vehicleType, hoursValue);
+    return price !== null ? ('約 NT$ ' + price.toLocaleString()) : '請洽客服報價';
   }
 
   const LUGGAGE_SIZES = [
@@ -1136,7 +1133,7 @@
 
       document.getElementById('bottomNote').innerHTML =
         '包車費用僅供參考，最終價格以客服報價為準；部分特殊車款需另洽客服報價。<br>' +
-        '超時收費標準：轎車／休旅車每小時加收 NT$500，9人座每小時加收 NT$700（超過8小時部分，實際費用請洽客服報價）。<br>' +
+        '超時收費標準（每小時）：轎車 NT$600，休旅車 NT$700，9人座 NT$900（超過10小時部分）。<br>' +
         '（8小時以上方案總里程不超過200公里為限），（4小時方案以不超過100公里為限），超過部分每公里加收NT$25.<br>' +
         '點擊「傳送到 LINE」將開啟 LINE 分享視窗，選擇聊天對象送出。';
       document.getElementById('return-tear').style.display = 'none';
@@ -1252,7 +1249,7 @@
       bodyContents.push(
         flexRow('預估費用', describeCharterPrice(formData.vehicleType, formData.charterHours), '#FFB454'),
         { type: 'text', text: '僅供參考，最終以客服報價為準', size: 'xxs', color: '#8B94A7', margin: 'sm' },
-        { type: 'text', text: '超時收費：轎車／休旅車每小時NT$500，9人座每小時NT$700。', size: 'xxs', color: '#8B94A7', wrap: true, margin: 'md' },
+        { type: 'text', text: '超時收費（每小時，超過10小時部分）：轎車NT$600，休旅車NT$700，9人座NT$900。', size: 'xxs', color: '#8B94A7', wrap: true, margin: 'md' },
         { type: 'text', text: '（8小時以上方案總里程不超過200公里為限），（4小時方案以不超過100公里為限），超過部分每公里加收NT$25.', size: 'xxs', color: '#8B94A7', wrap: true, margin: 'sm' }
       );
     } else {
@@ -1305,7 +1302,7 @@
       lines.push("包車時數：" + (formData.charterHours || '—') + " 小時");
       lines.push("行程需求：" + (formData.charterNote || "無"));
       lines.push("預估包車費用：" + describeCharterPrice(formData.vehicleType, formData.charterHours) + "（僅供參考，最終以客服報價為準）");
-      lines.push("超時收費標準：轎車／休旅車每小時加收NT$500，9人座每小時加收NT$700。");
+      lines.push("超時收費標準（每小時，超過10小時部分）：轎車加收NT$600，休旅車加收NT$700，9人座加收NT$900。");
       lines.push("備註：（8小時以上方案總里程不超過200公里為限），（4小時方案以不超過100公里為限），超過部分每公里加收NT$25.");
     } else {
       lines.push("下車：" + shortLocation('d'));
